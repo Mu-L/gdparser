@@ -37,6 +37,11 @@ jobs:
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@v4
 
+      - name: Ensure Gradle wrapper is executable (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: chmod +x ./gradlew
+
       - name: Compile classes (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
