@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("org.gradlex.extra-java-module-info") version "1.9"
 }
 
 group = "dev.superice"
@@ -53,6 +54,10 @@ dependencies {
     testImplementation(platform("org.junit:junit-bom:5.10.0"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+extraJavaModuleInfo {
+    automaticModule("tree-sitter-0.26.3.jar", "tree_sitter")
 }
 
 tasks.withType<Test>().configureEach {
