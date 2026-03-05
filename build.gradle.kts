@@ -57,7 +57,7 @@ dependencies {
 }
 
 extraJavaModuleInfo {
-    automaticModule("tree-sitter-0.26.3.jar", "tree_sitter")
+    automaticModule("tree-sitter-0.26.3.jar", "tree.sitter")
 }
 
 tasks.withType<Test>().configureEach {

@@ -1,6 +1,6 @@
 open module gdparser {
     requires org.jetbrains.annotations;
-    requires tree_sitter;
+    requires tree.sitter;
 
     exports dev.superice.gdparser.frontend.ast;
     exports dev.superice.gdparser.frontend.cst;
