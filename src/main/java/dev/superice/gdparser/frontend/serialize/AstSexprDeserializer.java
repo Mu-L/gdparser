@@ -1,8 +1,11 @@
 package dev.superice.gdparser.frontend.serialize;
 
+import dev.superice.gdparser.frontend.ast.Point;
+import dev.superice.gdparser.frontend.ast.Range;
 import dev.superice.gdparser.frontend.ast.SourceFile;
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.reflect.RecordComponent;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -12,6 +15,9 @@ import java.util.Objects;
 
 /// Deserializes AST records from canonical S-expression text.
 public final class AstSexprDeserializer {
+
+    private static final Point ZERO_POINT = new Point(0, 0);
+    private static final Range ZERO_RANGE = new Range(0, 0, ZERO_POINT, ZERO_POINT);
 
     public @NotNull SourceFile deserialize(String sexpr) {
         Objects.requireNonNull(sexpr, "sexpr must not be null");
@@ -140,6 +146,11 @@ public final class AstSexprDeserializer {
             var component = meta.components().get(index);
             var valueExpr = fieldValues.get(component.getName());
             if (valueExpr == null) {
+                var defaultValue = defaultValueForMissingComponent(component);
+                if (defaultValue != null) {
+                    args[index] = defaultValue;
+                    continue;
+                }
                 throw new IllegalArgumentException(
                         "Missing field '%s' for tag '%s' at %s".formatted(component.getName(), tag, path)
                 );
@@ -155,6 +166,13 @@ public final class AstSexprDeserializer {
                     exception
             );
         }
+    }
+
+    private static Object defaultValueForMissingComponent(RecordComponent component) {
+        if (component.getType() == Range.class && component.getName().equals("range")) {
+            return ZERO_RANGE;
+        }
+        return null;
     }
 
     private static String decodeString(SExpr expr, String path) {

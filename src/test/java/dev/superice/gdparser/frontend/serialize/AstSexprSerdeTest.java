@@ -50,6 +50,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
@@ -121,6 +122,40 @@ class AstSexprSerdeTest {
     }
 
     @Test
+    void shouldSerializePrettyTextThatDeserializerCanLoad() {
+        var ast = manualAstFixture();
+
+        var canonicalText = serializer.serialize(ast);
+        var prettyText = serializer.serializePretty(ast);
+        var restored = deserializer.deserialize(prettyText);
+
+        assertEquals(ast, restored);
+        assertEquals(canonicalText, serializer.serialize(restored));
+        assertNotEquals(canonicalText, prettyText);
+        assertTrue(prettyText.startsWith("(source-file\n"));
+        assertTrue(prettyText.contains("\n  (statements\n"));
+        assertTrue(prettyText.contains("\n    (list\n"));
+        assertTrue(prettyText.contains("\n      (class-name-statement\n"));
+    }
+
+    @Test
+    void shouldAllowPrettySerializationWithoutRange() {
+        var ast = manualAstFixture();
+        var expected = manualAstFixture(span(0, 0), span(0, 0));
+
+        var prettyText = serializer.serializePretty(ast);
+        var prettyWithoutRangeText = serializer.serializePretty(ast, AstSexprSerializer.PrettyMode.OMIT_RANGE);
+        var restored = deserializer.deserialize(prettyWithoutRangeText);
+
+        assertNotEquals(prettyText, prettyWithoutRangeText);
+        assertTrue(prettyWithoutRangeText.startsWith("(source-file\n"));
+        assertTrue(prettyWithoutRangeText.contains("\n  (statements\n"));
+        assertFalse(prettyWithoutRangeText.contains("(range"));
+        assertEquals(expected, restored);
+        assertEquals(serializer.serialize(expected), serializer.serialize(restored));
+    }
+
+    @Test
     void shouldRejectMalformedSexpr() {
         var malformedInputs = List.of(
                 "(",
@@ -163,16 +198,25 @@ class AstSexprSerdeTest {
 
                 var ast = mappingResult.ast();
                 var text = serializer.serialize(ast);
+                var prettyText = serializer.serializePretty(ast);
                 var restored = deserializer.deserialize(text);
+                var prettyRestored = deserializer.deserialize(prettyText);
 
                 assertFalse(ast.statements().isEmpty(), () -> "AST is empty for fixture: " + script.getFileName());
                 assertEquals(ast, restored, () -> "AST mismatch after round-trip for fixture: " + script.getFileName());
+                assertEquals(ast, prettyRestored, () -> "Pretty AST mismatch after round-trip for fixture: " + script.getFileName());
                 assertEquals(
                         text,
                         serializer.serialize(restored),
                         () -> "Serialized text is not canonical for fixture: " + script.getFileName()
                 );
+                assertEquals(
+                        text,
+                        serializer.serialize(prettyRestored),
+                        () -> "Pretty serialized text does not deserialize canonically for fixture: " + script.getFileName()
+                );
                 assertTrue(text.startsWith("(source-file "), () -> "Unexpected serialized root tag for " + script.getFileName());
+                assertTrue(prettyText.startsWith("(source-file\n"), () -> "Unexpected pretty serialized root tag for " + script.getFileName());
             }));
         }
         return List.copyOf(tests);
@@ -194,8 +238,10 @@ class AstSexprSerdeTest {
     }
 
     private static SourceFile manualAstFixture() {
-        var base = span(0, 10);
-        var tiny = span(1, 2);
+        return manualAstFixture(span(0, 10), span(1, 2));
+    }
+
+    private static SourceFile manualAstFixture(Range base, Range tiny) {
 
         var escapedText = "line1\\nline2 \\\"quoted\\\" \\\\ slash";
         var unknownExpr = new UnknownExpression("mystery_expression", escapedText, tiny);
