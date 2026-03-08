@@ -86,6 +86,9 @@ class AstSexprSerdeTest {
                     else:
                         pass
                     return data["x"]
+                
+                static func test(a):
+                    pass
                 """;
 
         var cstRoot = parserFacade.parseCstRoot(source);
@@ -98,6 +101,7 @@ class AstSexprSerdeTest {
 
         var ast = mappingResult.ast();
         var text = serializer.serialize(ast);
+        IO.println(serializer.serializePretty(ast, AstSexprSerializer.PrettyMode.OMIT_RANGE));
         var restored = deserializer.deserialize(text);
 
         assertEquals(ast, restored);
@@ -284,6 +288,7 @@ class AstSexprSerdeTest {
                 "run",
                 List.of(new Parameter("x", new TypeRef("int", tiny), null, false, tiny)),
                 null,
+                false,
                 new Block(
                         List.of(
                                 new VariableDeclaration(

@@ -78,6 +78,7 @@ class CstToAstMapperTest {
         assertEquals("_ready", function.name());
         assertEquals(1, function.parameters().size());
         assertNotNull(function.returnType());
+        assertFalse(function.isStatic());
     }
 
     @Test
@@ -240,6 +241,26 @@ class CstToAstMapperTest {
         assertTrue(containsAstValue(result.ast(), BreakpointStatement.class));
         assertTrue(containsAstValue(result.ast(), AssertStatement.class));
         assertNoUnknownNodes(result.ast(), "focused snippet");
+    }
+
+    @Test
+    void staticFunctionShouldMapStaticFlag() {
+        var source = """
+                static func increment() -> void:
+                    pass
+                
+                func decrement() -> void:
+                    pass
+                """;
+
+        var result = map(source);
+        assertFalse(hasErrors(result), () -> "Unexpected errors: " + result.diagnostics());
+
+        var staticFunction = assertInstanceOf(FunctionDeclaration.class, result.ast().statements().getFirst());
+        var instanceFunction = assertInstanceOf(FunctionDeclaration.class, result.ast().statements().getLast());
+
+        assertTrue(staticFunction.isStatic());
+        assertFalse(instanceFunction.isStatic());
     }
 
     @Test

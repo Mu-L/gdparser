@@ -318,6 +318,7 @@ public final class CstToAstMapper {
             var parametersNode = requireField(node, "parameters");
             var returnTypeNode = node.childByField("return_type");
             var bodyNode = node.childByField("body");
+            var isStatic = !node.namedChildrenOfType("static_keyword").isEmpty();
 
             var name = nameNode == null ? "<anonymous>" : textTrimmed(nameNode);
             var body = mapBody(bodyNode, AstFactory.range(node.range()));
@@ -325,6 +326,7 @@ public final class CstToAstMapper {
                     name,
                     mapParameters(parametersNode),
                     mapTypeRef(returnTypeNode),
+                    isStatic,
                     body,
                     AstFactory.range(node.range())
             );

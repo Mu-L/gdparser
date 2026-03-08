@@ -9,6 +9,7 @@ public record FunctionDeclaration(
         String name,
         List<Parameter> parameters,
         @Nullable TypeRef returnType,
+        boolean isStatic,
         Block body,
         Range range
 ) implements Statement {
