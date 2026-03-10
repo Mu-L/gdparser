@@ -34,6 +34,7 @@ public final class GdLanguageLoader {
     }
 
     public static @NotNull TSLanguage load() {
+        GdTreeSitterRuntimeBootstrap.initialize();
         var value = cached;
         if (value != null) {
             return value;
@@ -168,7 +169,7 @@ public final class GdLanguageLoader {
         return extractClasspathNativeToTarget(osArchPath, mappedName, osArch);
     }
 
-    private static Path resolveConfiguredResourceDir() {
+    static Path resolveConfiguredResourceDir() {
         var configured = System.getProperty(PROP_RESOURCE_DIR);
         if (configured == null || configured.isBlank()) {
             return Path.of("").toAbsolutePath().normalize().resolve("native");

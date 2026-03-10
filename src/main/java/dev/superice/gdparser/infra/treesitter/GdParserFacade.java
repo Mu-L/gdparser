@@ -29,6 +29,7 @@ public final class GdParserFacade {
     }
 
     private TSNode parseRootNode(String source) {
+        GdTreeSitterRuntimeBootstrap.initialize();
         var parser = new TSParser();
         if (!parser.setLanguage(language)) {
             throw new IllegalStateException("Failed to set parser language: " + GdLanguageLoader.SYMBOL_NAME);

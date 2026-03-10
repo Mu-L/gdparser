@@ -10,6 +10,7 @@ public final class GdLanguageAbiChecker {
     }
 
     public static void verify(TSLanguage language, String symbolName) {
+        GdTreeSitterRuntimeBootstrap.initialize();
         var abiVersion = language.abiVersion();
         var minCompatible = TSParser.TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION;
         var maxCompatible = TSParser.TREE_SITTER_LANGUAGE_VERSION;

@@ -28,16 +28,31 @@ class GdParserFacadeTest {
         GdLanguageLoader.clearCacheForTests();
         clearDirectory(TEST_RESOURCE_DIR);
         System.setProperty(GdLanguageLoader.PROP_RESOURCE_DIR, TEST_RESOURCE_DIR.toString());
+        System.clearProperty(GdTreeSitterRuntimeBootstrap.PROP_TREE_SITTER_LIB);
     }
 
     @AfterAll
     static void tearDownResourceDir() {
         GdLanguageLoader.clearCacheForTests();
         System.clearProperty(GdLanguageLoader.PROP_RESOURCE_DIR);
+        System.clearProperty(GdTreeSitterRuntimeBootstrap.PROP_TREE_SITTER_LIB);
     }
 
     @Test
     @Order(1)
+    void bootstrapSetsTreeSitterLibAndExtractsRuntimeLibraryToManagedResourceDirectory() {
+        var extractedRuntime = GdTreeSitterRuntimeBootstrap.runtimeLibraryPath(TEST_RESOURCE_DIR);
+
+        assertFalse(Files.exists(extractedRuntime), "Runtime library should not exist before bootstrap");
+
+        GdTreeSitterRuntimeBootstrap.initialize();
+
+        assertEquals(TEST_RESOURCE_DIR.toString(), System.getProperty(GdTreeSitterRuntimeBootstrap.PROP_TREE_SITTER_LIB));
+        assertTrue(Files.exists(extractedRuntime), "Runtime library should be extracted to managed resource directory");
+    }
+
+    @Test
+    @Order(2)
     void extractLibraryFromClasspathWhenManagedResourceDirectoryMissingLibrary() {
         ensureTreeSitterRuntimeReady();
         var mappedName = System.mapLibraryName(GdLanguageLoader.LIBRARY_BASE_NAME);
@@ -52,7 +67,7 @@ class GdParserFacadeTest {
     }
 
     @Test
-    @Order(2)
+    @Order(3)
     void parseMinimalReadyFunctionWithoutErrors() {
         ensureTreeSitterRuntimeReady();
         var source = "func _ready(): pass";
@@ -107,6 +122,7 @@ class GdParserFacadeTest {
 
     private static void ensureTreeSitterRuntimeReady() {
         try {
+            GdTreeSitterRuntimeBootstrap.initialize();
             var _ = org.treesitter.TSParser.TREE_SITTER_LANGUAGE_VERSION;
         } catch (LinkageError error) {
             fail("Failed to initialize tree-sitter-ng runtime", error);
