@@ -1,10 +1,26 @@
+import org.gradle.api.publish.maven.MavenPublication
+
 plugins {
     id("java")
+    id("maven-publish")
     id("org.gradlex.extra-java-module-info") version "1.9"
 }
 
-group = "dev.superice"
-version = "0.4.2"
+val defaultProjectGroup = "dev.superice"
+val defaultProjectVersion = "0.4.2"
+val requestedGroup = findProperty("group")?.toString()
+val requestedVersion = findProperty("version")?.toString()
+
+group = when {
+    requestedGroup.isNullOrBlank() -> defaultProjectGroup
+    requestedGroup == "unspecified" -> defaultProjectGroup
+    else -> requestedGroup
+}
+version = when {
+    requestedVersion.isNullOrBlank() -> defaultProjectVersion
+    requestedVersion == "unspecified" -> defaultProjectVersion
+    else -> requestedVersion
+}
 
 fun normalizedOsName(name: String): String = when {
     name.contains("win", ignoreCase = true) -> "windows"
@@ -32,6 +48,7 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
+    withSourcesJar()
 }
 
 repositories {
@@ -58,6 +75,34 @@ dependencies {
 
 extraJavaModuleInfo {
     automaticModule("tree-sitter-0.26.3.jar", "tree.sitter")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            from(components["java"])
+            artifactId = rootProject.name
+
+            pom {
+                name.set(rootProject.name)
+                description.set("A Java 25 GDScript parser pipeline built on Tree-sitter.")
+                url.set("https://github.com/SuperIceCN/gdparser")
+
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/license/mit/")
+                    }
+                }
+
+                scm {
+                    connection.set("scm:git:https://github.com/SuperIceCN/gdparser.git")
+                    developerConnection.set("scm:git:ssh://git@github.com/SuperIceCN/gdparser.git")
+                    url.set("https://github.com/SuperIceCN/gdparser")
+                }
+            }
+        }
+    }
 }
 
 tasks.withType<Test>().configureEach {
