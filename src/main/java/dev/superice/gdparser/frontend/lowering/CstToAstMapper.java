@@ -14,7 +14,6 @@ import dev.superice.gdparser.frontend.ast.AstDiagnosticSeverity;
 import dev.superice.gdparser.frontend.ast.AstFactory;
 import dev.superice.gdparser.frontend.ast.AstMappingResult;
 import dev.superice.gdparser.frontend.ast.AwaitExpression;
-import dev.superice.gdparser.frontend.ast.BaseCallExpression;
 import dev.superice.gdparser.frontend.ast.BinaryExpression;
 import dev.superice.gdparser.frontend.ast.Block;
 import dev.superice.gdparser.frontend.ast.BreakStatement;
@@ -74,6 +73,8 @@ import java.util.List;
 import java.util.Objects;
 
 /// Maps GDScript CST nodes to a stable Java AST and emits lowering diagnostics.
+/// The lowered AST intentionally models GDScript 4.x only, so legacy 3.x syntax
+/// that still appears in the bundled grammar is rejected with error diagnostics.
 public final class CstToAstMapper {
 
     public @NotNull AstMappingResult map(String source, CstNodeView root) {
@@ -144,8 +145,7 @@ public final class CstToAstMapper {
                 case "annotation" -> List.of(mapAnnotationStatement(node));
                 case "annotations" -> mapAnnotationStatements(node);
                 default -> {
-                    var statements = new ArrayList<Statement>();
-                    statements.addAll(mapAnnotationStatements(findNamedChildByType(node, "annotations")));
+                    var statements = new ArrayList<>(mapAnnotationStatements(findNamedChildByType(node, "annotations")));
                     statements.add(mapStatement(node));
                     yield List.copyOf(statements);
                 }
@@ -169,7 +169,12 @@ public final class CstToAstMapper {
             return List.copyOf(statements);
         }
 
-        private @NotNull AnnotationStatement mapAnnotationStatement(CstNodeView node) {
+        private @NotNull Statement mapAnnotationStatement(CstNodeView node) {
+            if (!textTrimmed(node).startsWith("@")) {
+                error("The bare `tool` keyword was removed in GDScript 4.x. Use `@tool` instead.", node);
+                return AstFactory.unknownStatement(node, text(node));
+            }
+
             var nameNode = firstNamedChild(node);
             if (nameNode == null) {
                 error("annotation missing name", node);
@@ -183,12 +188,17 @@ public final class CstToAstMapper {
         }
 
         private @NotNull Statement mapStatement(CstNodeView node) {
+            var legacyMessage = legacyStatementMessage(node);
+            if (legacyMessage != null) {
+                error(legacyMessage, node);
+                return AstFactory.unknownStatement(node, text(node));
+            }
+
             return switch (node.type()) {
                 case "class_name_statement" -> mapClassNameStatement(node);
                 case "extends_statement" -> mapExtendsStatement(node);
                 case "signal_statement" -> mapSignalStatement(node);
-                case "variable_statement", "onready_variable_statement", "export_variable_statement" ->
-                        mapVariableDeclaration(node, DeclarationKind.VAR);
+                case "variable_statement" -> mapVariableDeclaration(node, DeclarationKind.VAR);
                 case "const_statement" -> mapVariableDeclaration(node, DeclarationKind.CONST);
                 case "function_definition" -> mapFunctionDeclaration(node);
                 case "constructor_definition" -> mapConstructorDeclaration(node);
@@ -216,11 +226,9 @@ public final class CstToAstMapper {
         private @NotNull ClassNameStatement mapClassNameStatement(CstNodeView node) {
             var nameNode = requireField(node, "name");
             var extendsNode = node.childByField("extends");
-            var iconNode = node.childByField("icon_path");
             return new ClassNameStatement(
                     textTrimmed(nameNode),
                     extractExtendsTarget(extendsNode),
-                    iconNode == null ? null : textTrimmed(iconNode),
                     AstFactory.range(node.range())
             );
         }
@@ -239,12 +247,10 @@ public final class CstToAstMapper {
 
         private @NotNull ConstructorDeclaration mapConstructorDeclaration(CstNodeView node) {
             var parametersNode = requireField(node, "parameters");
-            var argumentsNode = node.childByField("arguments");
             var returnTypeNode = node.childByField("return_type");
             var bodyNode = requireField(node, "body");
             return new ConstructorDeclaration(
                     mapParameters(parametersNode),
-                    mapArgumentList(argumentsNode),
                     mapTypeRef(returnTypeNode),
                     mapBody(bodyNode, AstFactory.range(node.range())),
                     AstFactory.range(node.range())
@@ -446,6 +452,12 @@ public final class CstToAstMapper {
         }
 
         private @NotNull Statement mapExpressionStatement(CstNodeView node) {
+            var legacyMessage = legacyExpressionStatementMessage(node);
+            if (legacyMessage != null) {
+                error(legacyMessage, node);
+                return AstFactory.unknownStatement(node, text(node));
+            }
+
             var expressionNode = firstNamedChild(node);
             if (expressionNode == null) {
                 error("expression_statement missing expression", node);
@@ -475,13 +487,18 @@ public final class CstToAstMapper {
         }
 
         private @NotNull Expression mapExpression(CstNodeView node) {
+            var legacyMessage = legacyExpressionMessage(node);
+            if (legacyMessage != null) {
+                error(legacyMessage, node);
+                return AstFactory.unknownExpression(node, text(node));
+            }
+
             return switch (node.type()) {
                 case "identifier", "name" -> mapIdentifierExpression(node);
                 case "integer", "float", "string", "string_name", "true", "false", "null", "node_path" ->
                         new LiteralExpression(node.type(), text(node), AstFactory.range(node.range()));
                 case "get_node" -> new GetNodeExpression(text(node), AstFactory.range(node.range()));
                 case "call" -> mapCallExpression(node);
-                case "base_call" -> mapBaseCallExpression(node);
                 case "attribute" -> mapAttributeExpression(node);
                 case "subscript" -> mapSubscriptExpression(node);
                 case "binary_operator" -> mapBinaryExpression(node);
@@ -554,19 +571,6 @@ public final class CstToAstMapper {
             return new CallExpression(
                     mapExpression(calleeNode),
                     arguments,
-                    AstFactory.range(node.range())
-            );
-        }
-
-        private @NotNull BaseCallExpression mapBaseCallExpression(CstNodeView node) {
-            var nameNode = firstNamedChild(node);
-            if (nameNode == null) {
-                error("base_call missing target name", node);
-                return new BaseCallExpression("", List.of(), AstFactory.range(node.range()));
-            }
-            return new BaseCallExpression(
-                    textTrimmed(nameNode),
-                    mapArgumentList(node.childByField("arguments")),
                     AstFactory.range(node.range())
             );
         }
@@ -853,6 +857,70 @@ public final class CstToAstMapper {
         private boolean isIdentifierNode(CstNodeView node, String name) {
             return (node.type().equals("identifier") || node.type().equals("name"))
                     && textTrimmed(node).equals(name);
+        }
+
+        /// Rejects legacy 3.x forms that the bundled tree-sitter grammar still tokenizes,
+        /// so the lowered AST remains a faithful representation of 4.x source only.
+        private @Nullable String legacyStatementMessage(CstNodeView node) {
+            return switch (node.type()) {
+                case "export_variable_statement" ->
+                        "The `export` keyword syntax was removed in GDScript 4.x. Use `@export` and related annotations instead.";
+                case "onready_variable_statement" ->
+                        "The `onready var` syntax was removed in GDScript 4.x. Use `@onready` instead.";
+                case "constructor_definition" -> node.childByField("arguments") == null
+                        ? null
+                        : "Implicit constructor base arguments such as `func _init(...).(...):` were removed in GDScript 4.x. Call `super(...)` inside the constructor body instead.";
+                case "class_name_statement" -> node.childByField("icon_path") == null
+                        ? null
+                        : "Inline `class_name Name, \"res://icon.svg\"` syntax was removed in GDScript 4.x. Use `@icon(\"...\")` together with `class_name` instead.";
+                case "variable_statement" -> legacyVariableStatementMessage(node);
+                case "function_definition" -> hasLegacyRemoteKeyword(node)
+                        ? "Legacy multiplayer keywords (`remote`, `master`, `puppet`, `*sync`) were removed in GDScript 4.x. Use `@rpc` instead."
+                        : null;
+                default -> null;
+            };
+        }
+
+        private @Nullable String legacyVariableStatementMessage(CstNodeView node) {
+            if (hasLegacyRemoteKeyword(node)) {
+                return "Legacy multiplayer keywords (`remote`, `master`, `puppet`, `*sync`) were removed in GDScript 4.x. Use `@rpc` instead.";
+            }
+            if (usesLegacySetgetKeyword(node)) {
+                return "The `setget` keyword was removed in GDScript 4.x. Use property getter/setter blocks instead.";
+            }
+            return null;
+        }
+
+        private @Nullable String legacyExpressionStatementMessage(CstNodeView node) {
+            var expressionNode = firstNamedChild(node);
+            if (expressionNode != null && isIdentifierNode(expressionNode, "tool") && textTrimmed(node).equals("tool")) {
+                return "The `tool` keyword was removed in GDScript 4.x. Use `@tool` instead.";
+            }
+            return null;
+        }
+
+        private @Nullable String legacyExpressionMessage(CstNodeView node) {
+            return switch (node.type()) {
+                case "base_call" ->
+                        "Implicit base calls such as `.foo()` were removed in GDScript 4.x. Use `super.foo()` instead.";
+                case "call" -> {
+                    var argumentsNode = node.childByField("arguments");
+                    var calleeNode = firstNamedChildExcluding(node, argumentsNode);
+                    yield calleeNode != null && isIdentifierNode(calleeNode, "yield")
+                            ? "The `yield` keyword was removed in GDScript 4.x. Use `await` instead."
+                            : null;
+                }
+                default -> null;
+            };
+        }
+
+        private boolean hasLegacyRemoteKeyword(CstNodeView node) {
+            return node.childByField("remote_keyword") != null || !node.namedChildrenOfType("remote_keyword").isEmpty();
+        }
+
+        private boolean usesLegacySetgetKeyword(CstNodeView node) {
+            var setgetNode = node.childByField("setget");
+            return setgetNode != null && textTrimmed(setgetNode).startsWith("setget");
         }
 
         private @Nullable CstNodeView findNamedChildByType(CstNodeView node, String nodeType) {

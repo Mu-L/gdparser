@@ -139,10 +139,6 @@ public interface ASTNodeHandler {
         return handleNode(node);
     }
 
-    default FrontendASTTraversalDirective handleBaseCallExpression(BaseCallExpression node) {
-        return handleNode(node);
-    }
-
     default FrontendASTTraversalDirective handleBinaryExpression(BinaryExpression node) {
         return handleNode(node);
     }

@@ -9,7 +9,6 @@ import dev.superice.gdparser.frontend.ast.AttributeExpression;
 import dev.superice.gdparser.frontend.ast.AttributePropertyStep;
 import dev.superice.gdparser.frontend.ast.AttributeSubscriptStep;
 import dev.superice.gdparser.frontend.ast.AwaitExpression;
-import dev.superice.gdparser.frontend.ast.BaseCallExpression;
 import dev.superice.gdparser.frontend.ast.BinaryExpression;
 import dev.superice.gdparser.frontend.ast.Block;
 import dev.superice.gdparser.frontend.ast.BreakStatement;
@@ -113,7 +112,6 @@ final class AstSexprSchema {
         register(GetNodeExpression.class);
         register(PreloadExpression.class);
         register(CallExpression.class);
-        register(BaseCallExpression.class);
         register(AttributePropertyStep.class);
         register(AttributeCallStep.class);
         register(AttributeSubscriptStep.class);

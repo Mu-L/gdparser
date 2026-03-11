@@ -37,7 +37,7 @@ class NodeChildrenTest {
                 "variable_statement",
                 RANGE
         );
-        var className = new ClassNameStatement("Demo", "Node", "res://icon.svg", RANGE);
+        var className = new ClassNameStatement("Demo", "Node", RANGE);
         var ifStatement = new IfStatement(
                 new IdentifierExpression("ready", RANGE),
                 new Block(List.of(new PassStatement(RANGE)), RANGE),

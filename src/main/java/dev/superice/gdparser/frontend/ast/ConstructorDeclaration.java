@@ -5,9 +5,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /// `_init` constructor declaration lowered from `constructor_definition`.
+/// Legacy 3.x parent-constructor chaining syntax is rejected during lowering.
 public record ConstructorDeclaration(
         List<Parameter> parameters,
-        List<Expression> baseArguments,
         @Nullable TypeRef returnType,
         Block body,
         Range range
@@ -17,7 +17,6 @@ public record ConstructorDeclaration(
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()
                 .addAll(parameters)
-                .addAll(baseArguments)
                 .add(returnType)
                 .add(body)
                 .toList();

@@ -69,7 +69,6 @@ public final class ASTWalker {
             case AssignmentExpression assignmentExpression -> handler.handleAssignmentExpression(assignmentExpression);
             case AttributeExpression attributeExpression -> handler.handleAttributeExpression(attributeExpression);
             case AwaitExpression awaitExpression -> handler.handleAwaitExpression(awaitExpression);
-            case BaseCallExpression baseCallExpression -> handler.handleBaseCallExpression(baseCallExpression);
             case BinaryExpression binaryExpression -> handler.handleBinaryExpression(binaryExpression);
             case CallExpression callExpression -> handler.handleCallExpression(callExpression);
             case CastExpression castExpression -> handler.handleCastExpression(castExpression);

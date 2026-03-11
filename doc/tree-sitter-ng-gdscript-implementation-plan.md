@@ -100,6 +100,7 @@
 - mapper 不直接依赖 `TSNode` API，只依赖 `CstNodeView`。
 - 不支持节点不直接丢弃，统一降级为 `Unknown*` 并附 warning。
 - 结构错误（`ERROR`/`MISSING`）统一进入 error 级诊断。
+- CST -> AST lowering 只面向 GDScript 4.x；上游 grammar 仍能识别的 3.x 旧语法必须在 lowering 阶段显式拒绝。
 
 ### 3.4 S-expr 协议约定
 

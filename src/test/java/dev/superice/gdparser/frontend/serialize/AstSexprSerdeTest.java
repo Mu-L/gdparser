@@ -318,7 +318,7 @@ class AstSexprSerdeTest {
         );
 
         var statements = List.<Statement>of(
-                new ClassNameStatement("Demo", null, "res://icons/\"demo\"\\n.png", tiny),
+                new ClassNameStatement("Demo", null, tiny),
                 function
         );
 

@@ -199,7 +199,7 @@ class CstToAstMapperTest {
                     return 1
                 
                 func _init():
-                    .foo()
+                    super.foo()
                     var target = $"../Node" as Node
                     var matches = target is Node
                     var misses = target is not Node2D
@@ -226,7 +226,6 @@ class CstToAstMapperTest {
         assertTrue(containsAstValue(result.ast(), EnumDeclaration.class));
         assertTrue(containsAstValue(result.ast(), ClassDeclaration.class));
         assertTrue(containsAstValue(result.ast(), ConstructorDeclaration.class));
-        assertTrue(containsAstValue(result.ast(), BaseCallExpression.class));
         assertTrue(containsAstValue(result.ast(), GetNodeExpression.class));
         assertTrue(containsAstValue(result.ast(), CastExpression.class));
         assertTrue(containsAstValue(result.ast(), TypeTestExpression.class));

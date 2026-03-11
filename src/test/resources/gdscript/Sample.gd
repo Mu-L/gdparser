@@ -1,4 +1,4 @@
-tool
+@tool
 
 const Logger = preload("./util/logger.gd")
 

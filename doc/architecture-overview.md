@@ -89,6 +89,7 @@ Responsibilities:
 - Map supported CST node types into typed AST records
 - Emit warnings for unsupported/unknown forms
 - Convert CST structural errors into `ERROR` diagnostics
+- Reject legacy GDScript 3.x syntax during lowering so the typed AST stays 4.x-only
 
 ### `frontend.serialize`
 
@@ -135,6 +136,7 @@ Behavior policy:
 - Preserve progress when possible (`Unknown*` + warning)
 - Fail fast for runtime incompatibility or strict-mode mapping
 - Keep spans available so diagnostics are actionable
+- Treat legacy GDScript 3.x syntax accepted by the upstream grammar as lowering-time `ERROR`s
 
 ## 6. Test Architecture
 
