@@ -12,4 +12,14 @@ public record IfStatement(
         @Nullable Block elseBody,
         Range range
 ) implements Statement {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .add(condition)
+                .add(body)
+                .addAll(elifClauses)
+                .add(elseBody)
+                .toList();
+    }
 }

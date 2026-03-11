@@ -13,4 +13,13 @@ public record FunctionDeclaration(
         Block body,
         Range range
 ) implements Statement {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .addAll(parameters)
+                .add(returnType)
+                .add(body)
+                .toList();
+    }
 }

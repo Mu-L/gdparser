@@ -8,14 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestFactory;
 
 import java.io.IOException;
-import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -323,56 +321,30 @@ class CstToAstMapperTest {
 
     private static boolean containsAstValue(SourceFile sourceFile, Class<?> expectedType) {
         var found = new boolean[]{false};
-        visitAst(sourceFile, value -> {
-            if (expectedType.isInstance(value)) {
-                found[0] = true;
+        new ASTWalker(new ASTNodeHandler() {
+            @Override
+            public FrontendASTTraversalDirective handleNode(Node node) {
+                if (expectedType.isInstance(node)) {
+                    found[0] = true;
+                    return FrontendASTTraversalDirective.SKIP_CHILDREN;
+                }
+                return FrontendASTTraversalDirective.CONTINUE;
             }
-        });
+        }).walk(sourceFile);
         return found[0];
     }
 
     private static void assertNoUnknownNodes(SourceFile sourceFile, String context) {
         var unknownTypes = new ArrayList<String>();
-        visitAst(sourceFile, value -> {
-            if (value instanceof UnknownStatement || value instanceof UnknownExpression || value instanceof UnknownAttributeStep) {
-                unknownTypes.add(value.getClass().getSimpleName());
+        new ASTWalker(new ASTNodeHandler() {
+            @Override
+            public FrontendASTTraversalDirective handleNode(Node node) {
+                if (node instanceof UnknownStatement || node instanceof UnknownExpression || node instanceof UnknownAttributeStep) {
+                    unknownTypes.add(node.getClass().getSimpleName());
+                }
+                return FrontendASTTraversalDirective.CONTINUE;
             }
-        });
+        }).walk(sourceFile);
         assertTrue(unknownTypes.isEmpty(), () -> "Unexpected unknown nodes in " + context + ": " + unknownTypes);
-    }
-
-    private static void visitAst(Object value, Consumer<Object> consumer) {
-        if (value == null) {
-            return;
-        }
-        if (value instanceof List<?> list) {
-            for (var element : list) {
-                visitAst(element, consumer);
-            }
-            return;
-        }
-
-        var type = value.getClass();
-        if (!type.isRecord()) {
-            return;
-        }
-
-        consumer.accept(value);
-        for (var component : type.getRecordComponents()) {
-            visitAst(readRecordComponent(component, value), consumer);
-        }
-    }
-
-    private static Object readRecordComponent(RecordComponent component, Object instance) {
-        try {
-            return component.getAccessor().invoke(instance);
-        } catch (RuntimeException exception) {
-            throw exception;
-        } catch (Throwable throwable) {
-            throw new IllegalStateException(
-                    "Cannot access record component '%s' on %s".formatted(component.getName(), instance.getClass().getName()),
-                    throwable
-            );
-        }
     }
 }

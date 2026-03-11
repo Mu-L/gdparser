@@ -11,4 +11,13 @@ public record MatchSection(
         Block body,
         Range range
 ) implements Node {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .addAll(patterns)
+                .add(guard)
+                .add(body)
+                .toList();
+    }
 }

@@ -12,4 +12,12 @@ public record VariableDeclaration(
         String sourceNodeType,
         Range range
 ) implements Statement {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .add(type)
+                .add(value)
+                .toList();
+    }
 }

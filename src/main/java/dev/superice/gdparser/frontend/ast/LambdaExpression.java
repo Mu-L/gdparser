@@ -12,4 +12,13 @@ public record LambdaExpression(
         Block body,
         Range range
 ) implements Expression {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .addAll(parameters)
+                .add(returnType)
+                .add(body)
+                .toList();
+    }
 }

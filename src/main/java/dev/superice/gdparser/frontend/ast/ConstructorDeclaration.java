@@ -12,4 +12,14 @@ public record ConstructorDeclaration(
         Block body,
         Range range
 ) implements Statement {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .addAll(parameters)
+                .addAll(baseArguments)
+                .add(returnType)
+                .add(body)
+                .toList();
+    }
 }

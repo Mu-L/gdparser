@@ -10,4 +10,12 @@ public record Parameter(
         boolean variadic,
         Range range
 ) implements Node {
+
+    @Override
+    public java.util.List<Node> getChildren() {
+        return NodeChildren.builder()
+                .add(type)
+                .add(defaultValue)
+                .toList();
+    }
 }
