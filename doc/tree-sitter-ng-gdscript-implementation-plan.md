@@ -83,7 +83,7 @@
 
 运行时加载优先级（当前实现）：
 
-1. 托管资源目录（`gdparser.gdscript.resourceDir`，默认当前目录 `native`）
+1. 托管资源目录（`gdparser.gdscript.resourceDir`，默认加载器代码源 / jar 同级的 `native`）
 2. `java.library.path`
 3. 显式库文件（`gdparser.gdscript.nativeLibPath`）
 4. 显式目录（`gdparser.gdscript.nativeLibDir`）

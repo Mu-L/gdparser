@@ -12,6 +12,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -108,10 +109,14 @@ public final class GdLanguageLoader {
         var osArch = normalizedOs() + "-" + normalizedArch();
         var mappedName = System.mapLibraryName(LIBRARY_BASE_NAME);
 
-        var managedPath = resolveManagedLibraryPath(mappedName, osArch);
-        tryAddLookup(attempts, "managed resource directory path: " + managedPath, () ->
-                SymbolLookup.libraryLookup(managedPath, arena)
-        );
+        try {
+            var managedPath = resolveManagedLibraryPath(mappedName, osArch);
+            tryAddLookup(attempts, "managed resource directory path: " + managedPath, () ->
+                    SymbolLookup.libraryLookup(managedPath, arena)
+            );
+        } catch (RuntimeException _) {
+            // Continue with fallback lookup strategies when the default resource directory is not writable.
+        }
 
         tryAddLookup(attempts, "java.library.path lookup: " + mappedName, () ->
                 SymbolLookup.libraryLookup(mappedName, arena)
@@ -172,9 +177,27 @@ public final class GdLanguageLoader {
     static Path resolveConfiguredResourceDir() {
         var configured = System.getProperty(PROP_RESOURCE_DIR);
         if (configured == null || configured.isBlank()) {
-            return Path.of("").toAbsolutePath().normalize().resolve("native");
+            return defaultResourceDir();
         }
         return Path.of(configured).toAbsolutePath().normalize();
+    }
+
+    private static Path defaultResourceDir() {
+        try {
+            var codeSource = GdLanguageLoader.class.getProtectionDomain().getCodeSource();
+            if (codeSource == null) {
+                return currentDirectoryResourceDir();
+            }
+            var location = Path.of(codeSource.getLocation().toURI()).toAbsolutePath().normalize();
+            var baseDir = Files.isRegularFile(location) ? location.getParent() : location;
+            return baseDir.resolve("native");
+        } catch (RuntimeException | URISyntaxException _) {
+            return currentDirectoryResourceDir();
+        }
+    }
+
+    private static Path currentDirectoryResourceDir() {
+        return Path.of("").toAbsolutePath().normalize().resolve("native");
     }
 
     private static Path extractClasspathNativeToTarget(Path targetPath, String mappedName, String osArch) {

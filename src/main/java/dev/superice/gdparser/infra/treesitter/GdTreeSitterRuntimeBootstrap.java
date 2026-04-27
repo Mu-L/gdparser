@@ -24,8 +24,33 @@ final class GdTreeSitterRuntimeBootstrap {
         }
 
         var managedDir = GdLanguageLoader.resolveConfiguredResourceDir();
+        if (tryInitializeIn(managedDir)) {
+            return;
+        }
+
+        var tempDir = createTempRuntimeDir();
+        System.setProperty(PROP_TREE_SITTER_LIB, tempDir.toString());
+        extractRuntimeLibraryIfMissing(tempDir);
+    }
+
+    private static boolean tryInitializeIn(Path managedDir) {
         System.setProperty(PROP_TREE_SITTER_LIB, managedDir.toString());
-        extractRuntimeLibraryIfMissing(managedDir);
+        try {
+            extractRuntimeLibraryIfMissing(managedDir);
+            return true;
+        } catch (RuntimeException _) {
+            return false;
+        }
+    }
+
+    private static Path createTempRuntimeDir() {
+        try {
+            var tempDir = Files.createTempDirectory("gdparser-tree-sitter-");
+            tempDir.toFile().deleteOnExit();
+            return tempDir;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to create tree-sitter-ng runtime temp directory", exception);
+        }
     }
 
     private static void extractRuntimeLibraryIfMissing(Path managedDir) {

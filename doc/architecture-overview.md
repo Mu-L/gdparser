@@ -112,11 +112,11 @@ Current S-expression conventions:
 
 `GdLanguageLoader` attempts lookups in this order:
 
-1. Managed resource directory (`gdparser.gdscript.resourceDir`, default `./native`)
+1. Managed resource directory (`gdparser.gdscript.resourceDir`, default `native` beside the loader code source / jar)
 2. `java.library.path`
 3. Explicit file path (`gdparser.gdscript.nativeLibPath`)
 4. Explicit directory (`gdparser.gdscript.nativeLibDir`)
-5. Classpath extraction fallback
+5. Classpath extraction fallback to a temporary directory
 
 Why this matters:
 
