@@ -15,12 +15,15 @@ import dev.superice.gdparser.frontend.ast.ConditionalExpression;
 import dev.superice.gdparser.frontend.ast.DeclarationKind;
 import dev.superice.gdparser.frontend.ast.DictEntry;
 import dev.superice.gdparser.frontend.ast.DictionaryExpression;
+import dev.superice.gdparser.frontend.ast.ErrorExpression;
+import dev.superice.gdparser.frontend.ast.ErrorStatement;
 import dev.superice.gdparser.frontend.ast.Expression;
 import dev.superice.gdparser.frontend.ast.ExpressionStatement;
 import dev.superice.gdparser.frontend.ast.FunctionDeclaration;
 import dev.superice.gdparser.frontend.ast.IdentifierExpression;
 import dev.superice.gdparser.frontend.ast.LambdaExpression;
 import dev.superice.gdparser.frontend.ast.LiteralExpression;
+import dev.superice.gdparser.frontend.ast.MissingAttributeStep;
 import dev.superice.gdparser.frontend.ast.Parameter;
 import dev.superice.gdparser.frontend.ast.PassStatement;
 import dev.superice.gdparser.frontend.ast.Point;
@@ -33,6 +36,7 @@ import dev.superice.gdparser.frontend.ast.UnaryExpression;
 import dev.superice.gdparser.frontend.ast.UnknownAttributeStep;
 import dev.superice.gdparser.frontend.ast.UnknownExpression;
 import dev.superice.gdparser.frontend.ast.VariableDeclaration;
+import dev.superice.gdparser.frontend.cst.CstIssueKind;
 import dev.superice.gdparser.frontend.lowering.CstToAstMapper;
 import dev.superice.gdparser.infra.treesitter.GdParserFacade;
 import org.junit.jupiter.api.BeforeAll;
@@ -279,6 +283,7 @@ class AstSexprSerdeTest {
                         new AttributePropertyStep("transform", tiny),
                         new AttributeCallStep("translated", List.of(new LiteralExpression("number", "1", tiny)), tiny),
                         new AttributeSubscriptStep("basis", List.of(new LiteralExpression("number", "0", tiny)), tiny),
+                        new MissingAttributeStep(tiny),
                         new UnknownAttributeStep("custom_step", "?.", tiny)
                 ),
                 tiny
@@ -319,7 +324,12 @@ class AstSexprSerdeTest {
 
         var statements = List.<Statement>of(
                 new ClassNameStatement("Demo", null, tiny),
-                function
+                function,
+                new ErrorStatement(CstIssueKind.ERROR, "ERROR", "func _ready(:", tiny),
+                new ExpressionStatement(
+                        new ErrorExpression(CstIssueKind.MISSING, "identifier", "", tiny),
+                        tiny
+                )
         );
 
         return new SourceFile(statements, base);

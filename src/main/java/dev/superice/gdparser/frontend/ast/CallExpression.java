@@ -5,6 +5,10 @@ import java.util.List;
 /// call expression.
 public record CallExpression(Expression callee, List<Expression> arguments, Range range) implements Expression {
 
+    public CallExpression {
+        arguments = List.copyOf(arguments);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

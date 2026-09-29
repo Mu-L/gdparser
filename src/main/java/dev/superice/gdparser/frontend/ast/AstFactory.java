@@ -1,5 +1,6 @@
 package dev.superice.gdparser.frontend.ast;
 
+import dev.superice.gdparser.frontend.cst.CstIssueKind;
 import dev.superice.gdparser.frontend.cst.CstNodeView;
 import dev.superice.gdparser.frontend.cst.CstRange;
 import org.jetbrains.annotations.NotNull;
@@ -33,5 +34,13 @@ public final class AstFactory {
 
     public static @NotNull UnknownExpression unknownExpression(CstNodeView node, String sourceText) {
         return new UnknownExpression(node.type(), sourceText, range(node.range()));
+    }
+
+    public static @NotNull ErrorStatement errorStatement(CstIssueKind kind, CstNodeView node, String sourceText) {
+        return new ErrorStatement(kind, node.type(), sourceText, range(node.range()));
+    }
+
+    public static @NotNull ErrorExpression errorExpression(CstIssueKind kind, CstNodeView node, String sourceText) {
+        return new ErrorExpression(kind, node.type(), sourceText, range(node.range()));
     }
 }

@@ -10,8 +10,12 @@ import org.junit.jupiter.api.TestMethodOrder;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -78,6 +82,41 @@ class GdParserFacadeTest {
         assertEquals("source", snapshot.rootType());
         assertFalse(snapshot.hasError(), () -> "Expected no parse errors, got S-expression: " + snapshot.sExpression());
         assertTrue(snapshot.sExpression().contains("function_definition"));
+    }
+
+    @Test
+    @Order(4)
+    void concurrentParsesOnSharedFacadeShouldProduceIdenticalResults() throws Exception {
+        // The facade holds no mutable parse state (a fresh TSParser per call), so concurrent
+        // parse calls on one shared instance must behave identically to sequential calls.
+        ensureTreeSitterRuntimeReady();
+        var facade = GdParserFacade.withDefaultLanguage();
+        var source = "func f():\n\tvar x = node.pa + 1\n\treturn x";
+        var expectedSexpr = facade.parseSnapshot(source).sExpression();
+        var expectedContext = facade.parseCompletionContext(source, 24);
+
+        var threadCount = 8;
+        var iterations = 25;
+        var pool = Executors.newFixedThreadPool(threadCount);
+        try {
+            var futures = new ArrayList<Future<?>>();
+            for (var thread = 0; thread < threadCount; thread++) {
+                futures.add(pool.submit(() -> {
+                    for (var iteration = 0; iteration < iterations; iteration++) {
+                        assertEquals(expectedSexpr, facade.parseSnapshot(source).sExpression());
+                        assertEquals(expectedContext, facade.parseCompletionContext(source, 24));
+                        assertEquals(expectedSexpr, facade.parseCstRoot(source).sExpression());
+                    }
+                }));
+            }
+            for (var future : futures) {
+                future.get();
+            }
+        } catch (ExecutionException exception) {
+            throw new AssertionError("Concurrent parse failed", exception.getCause());
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     private static void clearDirectory(Path directory) throws IOException {

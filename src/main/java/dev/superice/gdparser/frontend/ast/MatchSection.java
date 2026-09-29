@@ -12,6 +12,10 @@ public record MatchSection(
         Range range
 ) implements Node {
 
+    public MatchSection {
+        patterns = List.copyOf(patterns);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

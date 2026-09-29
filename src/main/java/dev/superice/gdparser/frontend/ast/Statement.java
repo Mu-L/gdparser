@@ -24,5 +24,6 @@ public sealed interface Statement extends Node permits Block,
         ReturnStatement,
         ExpressionStatement,
         PassStatement,
+        ErrorStatement,
         UnknownStatement {
 }

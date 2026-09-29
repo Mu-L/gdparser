@@ -26,6 +26,8 @@ import dev.superice.gdparser.frontend.ast.DictionaryExpression;
 import dev.superice.gdparser.frontend.ast.ElifClause;
 import dev.superice.gdparser.frontend.ast.EnumDeclaration;
 import dev.superice.gdparser.frontend.ast.EnumMember;
+import dev.superice.gdparser.frontend.ast.ErrorExpression;
+import dev.superice.gdparser.frontend.ast.ErrorStatement;
 import dev.superice.gdparser.frontend.ast.ExpressionStatement;
 import dev.superice.gdparser.frontend.ast.ExtendsStatement;
 import dev.superice.gdparser.frontend.ast.ForStatement;
@@ -37,6 +39,7 @@ import dev.superice.gdparser.frontend.ast.LambdaExpression;
 import dev.superice.gdparser.frontend.ast.LiteralExpression;
 import dev.superice.gdparser.frontend.ast.MatchSection;
 import dev.superice.gdparser.frontend.ast.MatchStatement;
+import dev.superice.gdparser.frontend.ast.MissingAttributeStep;
 import dev.superice.gdparser.frontend.ast.Parameter;
 import dev.superice.gdparser.frontend.ast.PassStatement;
 import dev.superice.gdparser.frontend.ast.PatternBindingExpression;
@@ -103,6 +106,7 @@ final class AstSexprSchema {
         register(RegionDirectiveStatement.class);
         register(ExpressionStatement.class);
         register(PassStatement.class);
+        register(ErrorStatement.class);
         register(UnknownStatement.class);
         register(TypeRef.class);
         register(Parameter.class);
@@ -115,6 +119,7 @@ final class AstSexprSchema {
         register(AttributePropertyStep.class);
         register(AttributeCallStep.class);
         register(AttributeSubscriptStep.class);
+        register(MissingAttributeStep.class);
         register(UnknownAttributeStep.class);
         register(AttributeExpression.class);
         register(SubscriptExpression.class);
@@ -130,6 +135,7 @@ final class AstSexprSchema {
         register(LambdaExpression.class);
         register(AwaitExpression.class);
         register(PatternBindingExpression.class);
+        register(ErrorExpression.class);
         register(UnknownExpression.class);
     }
 

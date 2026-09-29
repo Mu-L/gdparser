@@ -33,6 +33,12 @@ Key mode difference in lowering:
 - `map(...)`: tolerant, returns AST + diagnostics
 - `mapStrict(...)`: throws on any `ERROR` diagnostic
 
+Completion support flow:
+
+- `GdParserFacade.parseCompletionContext(source, byteOffset)` classifies the cursor position into a `CompletionContext` (`MEMBER_ACCESS` / `IDENTIFIER` / `TYPE_POSITION` / `CALL_ARGUMENT` / `UNKNOWN`) directly from the immutable CST snapshot.
+- It resolves both natural tree-sitter `ERROR`/missing-placeholder structures left by unfinished input (e.g. `obj.|` at end of file) and syntactically complete member access with the cursor inside a member name prefix (e.g. `obj.pa|r`).
+- `replaceableRange` always covers the whole identifier under the cursor; `receiverRange` (only for `MEMBER_ACCESS`) covers the fragment on the left side of the dot.
+
 ## 3. Package Map
 
 ### `infra.treesitter`
@@ -43,8 +49,13 @@ Main classes:
 
 - `GdLanguageLoader`: resolves/loads `tree_sitter_gdscript` symbol with fallback strategy
 - `GdLanguageAbiChecker`: verifies language ABI compatibility
-- `GdParserFacade`: minimal parse entrypoints (`parseSnapshot`, `parseCstRoot`)
+- `GdParserFacade`: minimal parse entrypoints (`parseSnapshot`, `parseCstRoot`, `parseCompletionContext`)
 - `GdParseSnapshot`: small parse result record for smoke checks
+- `CompletionContext` / `CompletionContextAnalyzer`: completion classification at a cursor byte offset
+
+Concurrency contract:
+
+- `GdParserFacade` holds only the shared immutable `TSLanguage`; every parse call creates a fresh `TSParser`, so concurrent parse calls on a shared instance are safe. `CstToAstMapper` is likewise stateless. Callers may share one facade and one mapper across analyses without locking or pooling.
 
 ### `frontend.cst`
 
@@ -54,7 +65,7 @@ Main classes:
 
 - `CstNodeView`: immutable CST node API (`type`, `children`, `range`, `field` helpers)
 - `CstAdapter`: converts `TSNode` to `CstNodeView`
-- `CstErrorDetector`: collects `ERROR` / `MISSING` structural issues
+- `CstErrorDetector`: collects `ERROR` / `MISSING` structural issues; grammar-specific zero-width placeholder nodes (e.g. the absent member name in `receiver. + 1`) are reported as `MISSING` issues whose node type names the expected symbol
 
 Design rule:
 
@@ -69,6 +80,9 @@ Characteristics:
 - Top-level records/sealed interfaces (no monolithic nested AST class)
 - Explicit source spans (`Range`, `Point`) on nodes
 - `Unknown*` nodes to preserve unsupported syntax safely
+- `ErrorStatement` / `ErrorExpression` nodes preserve CST `ERROR`/`MISSING` regions (kind, original node type, raw fragment, span) instead of guessing inaccurate nodes
+- `MissingAttributeStep` explicitly marks the absent final member step of an attribute chain such as `receiver.`
+- Record constructors defensively freeze collection components (`List.copyOf`), so a published AST object graph is immutable
 
 Main groups:
 
@@ -134,6 +148,10 @@ The parser/lowering stack separates three error classes:
 Behavior policy:
 
 - Preserve progress when possible (`Unknown*` + warning)
+- Map CST `ERROR` nodes to `ErrorStatement` / `ErrorExpression` with kind, span, and raw fragment; sibling mapping continues
+- Map a partial attribute chain (`receiver.`) to a normal `AttributeExpression` plus a `MissingAttributeStep` marker so the receiver prefix stays analyzable
+- Recover end-of-file dangling-dot `ERROR` nodes (e.g. `func f():\n\tnode.`, where the grammar wraps the whole function into one error) via bounded, fail-closed tail decomposition: an anchored function header, mappable body fragments, and an optional partial-statement prefix are rebuilt around the recovered chain; unrecognized shapes stay a single `ErrorStatement`
+- Emit `MISSING` diagnostics that name the expected token/symbol (e.g. `Missing identifier`) and keep carrying the error span
 - Fail fast for runtime incompatibility or strict-mode mapping
 - Keep spans available so diagnostics are actionable
 - Treat legacy GDScript 3.x syntax accepted by the upstream grammar as lowering-time `ERROR`s
@@ -142,10 +160,13 @@ Behavior policy:
 
 Test suite is layered by concern:
 
-- `GdParserFacadeTest`: loader/bootstrap + parse smoke tests
+- `GdParserFacadeTest`: loader/bootstrap + parse smoke tests + shared-facade concurrency check
+- `CompletionContextTest`: completion classification at cursor offsets
 - `CstAdapterTest`: CST API behavior and invariants
 - `CstFixtureScriptsTest`: fixture-wide CST structure baseline
 - `CstToAstMapperTest`: lowering correctness and diagnostics
+- `CstToAstMapperErrorRecoveryTest`: error-node mapping, partial chains, sibling continuation
+- `AstCollectionFreezeTest`: AST collection immutability contract
 - `AstSexprSerdeTest`: AST serde unit + fixture round-trip
 
 Fixture corpus:
@@ -217,7 +238,7 @@ Recommended targeted runs during iteration:
 ## 10. Design Principles to Keep
 
 - Keep Tree-sitter-specific details inside `infra.treesitter` and `frontend.cst`
-- Keep AST model explicit and immutable
+- Keep AST model explicit and immutable (constructors freeze collection components)
 - Prefer deterministic output and canonical formats for diffability
 - Preserve diagnosability over silent fallback
 - Add tests at the same layer where behavior changes

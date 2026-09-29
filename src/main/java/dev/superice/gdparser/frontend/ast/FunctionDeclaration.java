@@ -14,6 +14,10 @@ public record FunctionDeclaration(
         Range range
 ) implements Statement {
 
+    public FunctionDeclaration {
+        parameters = List.copyOf(parameters);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

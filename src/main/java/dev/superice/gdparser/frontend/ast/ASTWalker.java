@@ -58,6 +58,7 @@ public final class ASTWalker {
             case MatchSection matchSection -> handler.handleMatchSection(matchSection);
             case MatchStatement matchStatement -> handler.handleMatchStatement(matchStatement);
             case PassStatement passStatement -> handler.handlePassStatement(passStatement);
+            case ErrorStatement errorStatement -> handler.handleErrorStatement(errorStatement);
             case RegionDirectiveStatement regionDirectiveStatement ->
                     handler.handleRegionDirectiveStatement(regionDirectiveStatement);
             case ReturnStatement returnStatement -> handler.handleReturnStatement(returnStatement);
@@ -89,12 +90,14 @@ public final class ASTWalker {
             case TypeRef typeRef -> handler.handleTypeRef(typeRef);
             case TypeTestExpression typeTestExpression -> handler.handleTypeTestExpression(typeTestExpression);
             case UnaryExpression unaryExpression -> handler.handleUnaryExpression(unaryExpression);
+            case ErrorExpression errorExpression -> handler.handleErrorExpression(errorExpression);
             case UnknownExpression unknownExpression -> handler.handleUnknownExpression(unknownExpression);
             case AttributeCallStep attributeCallStep -> handler.handleAttributeCallStep(attributeCallStep);
             case AttributePropertyStep attributePropertyStep ->
                     handler.handleAttributePropertyStep(attributePropertyStep);
             case AttributeSubscriptStep attributeSubscriptStep ->
                     handler.handleAttributeSubscriptStep(attributeSubscriptStep);
+            case MissingAttributeStep missingAttributeStep -> handler.handleMissingAttributeStep(missingAttributeStep);
             case UnknownAttributeStep unknownAttributeStep -> handler.handleUnknownAttributeStep(unknownAttributeStep);
         };
     }

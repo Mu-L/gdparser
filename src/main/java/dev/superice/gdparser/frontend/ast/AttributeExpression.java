@@ -5,6 +5,10 @@ import java.util.List;
 /// attribute chain expression.
 public record AttributeExpression(Expression base, List<AttributeStep> steps, Range range) implements Expression {
 
+    public AttributeExpression {
+        steps = List.copyOf(steps);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

@@ -20,11 +20,14 @@
 - `infra/treesitter/GdLanguageLoader`
 - `infra/treesitter/GdLanguageAbiChecker`
 - `infra/treesitter/GdParserFacade`
+- `infra/treesitter/CompletionContext`（`parseCompletionContext` 补全上下文分类）
+
+并发约定：`GdParserFacade` 仅持有共享不可变的 `TSLanguage`，每次解析新建 `TSParser`，不保留解析状态，因此同一实例可被并发解析调用安全共享，无需加锁或池化。
 
 ### 2.2 CST 稳定访问层
 
 - 已完成 `CstNodeView` 不可变快照抽象，隔离 `org.treesitter` 直接依赖。
-- 已完成 `CstErrorDetector`（`ERROR`/`MISSING` 聚合）。
+- 已完成 `CstErrorDetector`（`ERROR`/`MISSING` 聚合）；grammar 以零宽度且携带错误代价的占位节点（如 `receiver. + 1` 中缺失的成员名）表示缺失符号时，同样归类为 `MISSING`，其节点类型即期望符号名。
 - mapper 层已只依赖 CST 抽象层。
 
 核心入口：
@@ -39,6 +42,13 @@
 - 已完成核心 lowering（顶层声明、常见语句、核心表达式）。
 - 已完成 `map`（容错）与 `mapStrict`（错误即失败）双模式。
 - 已完成 span 级诊断承载（`AstDiagnostic` + severity）。
+- 已完成错误恢复映射：CST `ERROR`/缺失占位节点降级为 `ErrorStatement`/`ErrorExpression`（携带 kind、原始节点类型与片段文本），兄弟节点映射不受影响；`receiver.` 形式的部分属性链映射为正常 `AttributeExpression` 加 `MissingAttributeStep` 末步标记，receiver 前缀保持可分析。
+- 已完成 EOF dangling-dot 的有界失败关闭恢复：grammar 会把 `func f():\n\tnode.` 这类 EOF 输入整体包成 `ERROR` 节点；mapper 通过锚定的函数头、可映射的 body 片段与可选的部分语句前缀（`var x =`/`return`/赋值）围绕恢复的链重建结构，未识别形状一律回退为单个 `ErrorStatement`。诊断收集后置到映射之后，被解构的 `ERROR` 节点按身份跳过整段诊断，改发点号末端零宽 `Missing identifier` 诊断及残余碎片级诊断。
+- `MISSING` 诊断消息携带期望 token/符号名（如 `Missing identifier`），诊断 range 与错误节点 range 保持一致。
+- AST record 构造器对集合组件做 `List.copyOf` 防御性冻结，发布后的 AST 对象图不可变。
+- `CstStructuralIssue` 携带来源节点引用，供恢复路径按身份协调诊断。
+
+并发约定：`CstToAstMapper` 无状态（每次 `map` 调用自建映射上下文），实例可跨分析并发共享。
 
 核心入口：
 
@@ -61,9 +71,10 @@
 
 已具备如下测试层次：
 
-- 解析层：`GdParserFacadeTest`
+- 解析层：`GdParserFacadeTest`、`CompletionContextTest`
 - CST 层：`CstAdapterTest`、`CstFixtureScriptsTest`
-- Lowering 层：`CstToAstMapperTest`
+- Lowering 层：`CstToAstMapperTest`、`CstToAstMapperErrorRecoveryTest`
+- AST 层：`AstCollectionFreezeTest`
 - 序列化层：`AstSexprSerdeTest`
 
 外部语料：
@@ -97,9 +108,10 @@
 ### 3.3 CST/AST 设计约定
 
 - AST 节点必须携带稳定 `Range`（byte + point）。
+- AST record 构造器必须对集合组件做防御性冻结（`List.copyOf`），保证对象图不可变。
 - mapper 不直接依赖 `TSNode` API，只依赖 `CstNodeView`。
 - 不支持节点不直接丢弃，统一降级为 `Unknown*` 并附 warning。
-- 结构错误（`ERROR`/`MISSING`）统一进入 error 级诊断。
+- 结构错误（`ERROR`/`MISSING`）统一进入 error 级诊断；对应 AST 区域降级为 `ErrorStatement`/`ErrorExpression`，不再用 `requireField` 以父节点冒充缺失字段；`MISSING` 诊断消息必须携带期望 token/符号名。例外：EOF dangling-dot 的 `ERROR` 节点按有界失败关闭规则解构恢复，诊断收集因此后置到映射之后并按节点身份去重。
 - CST -> AST lowering 只面向 GDScript 4.x；上游 grammar 仍能识别的 3.x 旧语法必须在 lowering 阶段显式拒绝。
 
 ### 3.4 S-expr 协议约定

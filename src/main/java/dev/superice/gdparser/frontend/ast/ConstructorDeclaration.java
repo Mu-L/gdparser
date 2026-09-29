@@ -13,6 +13,10 @@ public record ConstructorDeclaration(
         Range range
 ) implements Statement {
 
+    public ConstructorDeclaration {
+        parameters = List.copyOf(parameters);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

@@ -13,6 +13,10 @@ public record IfStatement(
         Range range
 ) implements Statement {
 
+    public IfStatement {
+        elifClauses = List.copyOf(elifClauses);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return NodeChildren.builder()

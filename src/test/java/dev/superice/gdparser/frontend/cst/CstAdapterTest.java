@@ -96,6 +96,20 @@ class CstAdapterTest {
         }
     }
 
+    @Test
+    void errorDetectorShouldCollectZeroWidthPlaceholderAsMissingIssue() {
+        // The grammar reports the absent member name in `node. + 1` as a zero-width identifier
+        // placeholder carrying an error cost rather than a tree-sitter MISSING node.
+        var root = parse("func f():\n\tvar x = node. + 1");
+        var issues = CstErrorDetector.collect(root);
+
+        var missing = issues.stream().filter(issue -> issue.kind() == CstIssueKind.MISSING).toList();
+        assertEquals(1, missing.size(), () -> "Expected exactly one MISSING issue: " + issues);
+        assertEquals("identifier", missing.getFirst().nodeType());
+        assertEquals(24, missing.getFirst().range().startByte());
+        assertEquals(24, missing.getFirst().range().endByte());
+    }
+
     private static CstNodeView parse(String source) {
         return parserFacade.parseCstRoot(source);
     }

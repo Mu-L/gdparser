@@ -99,6 +99,10 @@ public interface ASTNodeHandler {
         return handleNode(node);
     }
 
+    default FrontendASTTraversalDirective handleErrorStatement(ErrorStatement node) {
+        return handleNode(node);
+    }
+
     default FrontendASTTraversalDirective handleRegionDirectiveStatement(RegionDirectiveStatement node) {
         return handleNode(node);
     }
@@ -207,6 +211,10 @@ public interface ASTNodeHandler {
         return handleNode(node);
     }
 
+    default FrontendASTTraversalDirective handleErrorExpression(ErrorExpression node) {
+        return handleNode(node);
+    }
+
     default FrontendASTTraversalDirective handleAttributeCallStep(AttributeCallStep node) {
         return handleNode(node);
     }
@@ -220,6 +228,10 @@ public interface ASTNodeHandler {
     }
 
     default FrontendASTTraversalDirective handleUnknownAttributeStep(UnknownAttributeStep node) {
+        return handleNode(node);
+    }
+
+    default FrontendASTTraversalDirective handleMissingAttributeStep(MissingAttributeStep node) {
         return handleNode(node);
     }
 

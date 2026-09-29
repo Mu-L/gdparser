@@ -5,6 +5,10 @@ import java.util.List;
 /// dictionary expression.
 public record DictionaryExpression(List<DictEntry> entries, boolean openEnded, Range range) implements Expression {
 
+    public DictionaryExpression {
+        entries = List.copyOf(entries);
+    }
+
     @Override
     public java.util.List<Node> getChildren() {
         return java.util.List.copyOf(entries);
